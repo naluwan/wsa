@@ -35,8 +35,9 @@ import { CourseUnitSidebar } from "@/components/course-unit-sidebar"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/contexts/sidebar-context"
 
-// 動態導入 ReactPlayer（僅客戶端）
-const ReactPlayer = dynamic(() => import("react-player"), {
+// 動態導入 ReactPlayer（僅客戶端，避免 SSR 影響 YouTube iframe）
+// 改用官方建議的 lazy 版本，確保載入完成後才初始化播放器
+const ReactPlayer = dynamic(() => import("react-player/lazy"), {
   ssr: false,
 })
 
@@ -301,7 +302,7 @@ export default function JourneyPlayerPage() {
                 <div
                   key={`player-${currentUnit.unitId}`}
                   ref={playerContainerRef}
-                  className="relative w-full flex-1 bg-black"
+                  className="relative w-full flex-1 bg-black pointer-events-auto"
                 >
                   {currentUnit.videoUrl ? (
                     <>
@@ -329,8 +330,13 @@ export default function JourneyPlayerPage() {
                             playerVars: {
                               modestbranding: 1,
                               rel: 0,
-                            }
-                          }
+                              origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+                            },
+                          },
+                        }}
+                        onReady={() => {
+                          // 確保 YouTube iframe 已準備好，避免出現不可點擊的灰屏狀態
+                          setPlaying(false)
                         }}
                         onPlay={() => console.log('onPlay')}
                         onPause={() => console.log('onPause')}
