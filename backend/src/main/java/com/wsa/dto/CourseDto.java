@@ -39,6 +39,24 @@ public class CourseDto {
     /** 封面圖示 */
     private String coverIcon;
 
+    /** 老師名稱 */
+    private String teacherName;
+
+    /** 課程價格（新台幣，單位：元） */
+    private Integer priceTwd;
+
+    /** 課程封面圖片 URL */
+    private String thumbnailUrl;
+
+    /** 課程是否已上架 */
+    private Boolean isPublished;
+
+    /** 使用者是否擁有此課程（需根據登入使用者計算） */
+    private Boolean isOwned;
+
+    /** 課程是否有免費試看單元 */
+    private Boolean hasFreePreview;
+
     /** 單元列表（僅在取得課程詳情時包含） */
     private List<UnitSummaryDto> units;
 }

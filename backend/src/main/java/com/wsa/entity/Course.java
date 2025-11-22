@@ -57,6 +57,24 @@ public class Course {
     @Column(name = "cover_icon", length = 100)
     private String coverIcon;
 
+    /** 老師名稱 */
+    @Column(name = "teacher_name", nullable = false)
+    private String teacherName;
+
+    /** 課程價格（新台幣，單位：元） */
+    @Column(name = "price_twd", nullable = false)
+    @Builder.Default
+    private Integer priceTwd = 0;
+
+    /** 課程封面圖片 URL */
+    @Column(name = "thumbnail_url", columnDefinition = "TEXT")
+    private String thumbnailUrl;
+
+    /** 課程是否已上架 */
+    @Column(name = "is_published", nullable = false)
+    @Builder.Default
+    private Boolean isPublished = true;
+
     /** 建立時間（自動產生） */
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -58,6 +58,21 @@ public class Unit {
     @Builder.Default
     private Integer xpReward = 100;
 
+    /** 章節標題（用於 Accordion 分組顯示） */
+    @Column(name = "section_title", nullable = false)
+    @Builder.Default
+    private String sectionTitle = "未分類章節";
+
+    /** 是否為免費試看單元 */
+    @Column(name = "is_free_preview", nullable = false)
+    @Builder.Default
+    private Boolean isFreePreview = false;
+
+    /** 在章節內的排序順序 */
+    @Column(name = "order_in_section", nullable = false)
+    @Builder.Default
+    private Integer orderInSection = 0;
+
     /** 建立時間（自動產生） */
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

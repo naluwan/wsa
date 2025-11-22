@@ -32,6 +32,18 @@ public class UnitSummaryDto {
     /** 排序順序 */
     private Integer orderIndex;
 
+    /** 章節標題 */
+    private String sectionTitle;
+
+    /** 在章節內的排序順序 */
+    private Integer orderInSection;
+
+    /** 是否為免費試看單元 */
+    private Boolean isFreePreview;
+
+    /** 使用者是否可以存取此單元（需根據登入狀態和擁有權計算） */
+    private Boolean canAccess;
+
     /** 是否已完成（需根據使用者進度計算） */
     private Boolean isCompleted;
 }

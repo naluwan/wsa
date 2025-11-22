@@ -21,12 +21,12 @@ export const AVAILABLE_COURSES: Course[] = [
   {
     id: "DESIGN_PATTERNS",
     name: "軟體設計模式精通之旅",
-    code: "BACKEND_JAVA",
+    code: "SOFTWARE_DESIGN_PATTERN",
   },
   {
     id: "AI_BDD",
     name: "AI x BDD：規格驅動全自動開發術",
-    code: "AI_BDD",
+    code: "AI_X_BDD",
   },
 ];
 

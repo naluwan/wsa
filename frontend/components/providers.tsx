@@ -7,6 +7,7 @@
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { CourseProvider } from "@/contexts/course-context";
+import { SidebarProvider } from "@/contexts/sidebar-context";
 import { ReactNode } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -17,7 +18,11 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <CourseProvider>{children}</CourseProvider>
+      <CourseProvider>
+        <SidebarProvider>
+          {children}
+        </SidebarProvider>
+      </CourseProvider>
     </ThemeProvider>
   );
 }

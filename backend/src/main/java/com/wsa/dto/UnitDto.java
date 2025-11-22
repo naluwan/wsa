@@ -41,6 +41,21 @@ public class UnitDto {
     /** 經驗值獎勵 */
     private Integer xpReward;
 
+    /** 章節標題 */
+    private String sectionTitle;
+
+    /** 在章節內的排序順序 */
+    private Integer orderInSection;
+
+    /** 是否為免費試看單元 */
+    private Boolean isFreePreview;
+
+    /** 使用者是否可以存取此單元（需根據登入狀態和擁有權計算） */
+    private Boolean canAccess;
+
+    /** 所屬課程標題（用於顯示） */
+    private String courseTitle;
+
     /** 是否已完成 */
     private Boolean isCompleted;
 }

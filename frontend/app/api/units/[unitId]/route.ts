@@ -43,22 +43,20 @@ export async function GET(
     console.log("[/api/units/[unitId]] GET - Token 存在:", !!token);
     console.log("[/api/units/[unitId]] GET - 單元 ID:", unitId);
 
-    // 步驟 2: 若沒有 token，回傳 401
-    if (!token) {
-      console.log("[/api/units/[unitId]] GET - 沒有 token，回傳 401");
-      return NextResponse.json({ error: "未授權" }, { status: 401 });
-    }
-
-    // 步驟 3: 使用 token 向後端 API 請求單元詳情
+    // 步驟 2: 準備請求 headers（未登入時也允許存取，但 canAccess 會是 false）
     const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
     console.log("[/api/units/[unitId]] GET - 向後端發送請求到:", `${apiUrl}/api/units/${unitId}`);
 
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    // 步驟 3: 向後端 API 請求單元詳情
     const response = await fetch(
       `${apiUrl}/api/units/${unitId}`,
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
       }
     );
 

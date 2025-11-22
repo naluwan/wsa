@@ -3,11 +3,12 @@
  * 包含：
  * 1. 提示條（僅軟體設計模式精通之旅顯示）
  * 2. Hero 區塊 - 歡迎來到水球軟體學院
- * 3. 兩個主要課程卡片
+ * 3. 兩個主要課程卡片（從 API 獲取真實資料）
  * 4. 四張資訊卡片
  */
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Trophy, Sword, TrendingUp, BookOpen, Check } from "lucide-react"
@@ -18,31 +19,18 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useCourse } from "@/contexts/course-context"
 
-// 假資料：主要課程
-const featuredCourses = [
-  {
-    id: "DESIGN_PATTERNS",
-    code: "BACKEND_JAVA",
-    name: "軟體設計模式精通之旅",
-    description: "用一趟旅程的時間，成為硬核的 Coding 實戰高手",
-    status: "水球潘",
-    image: "/images/course_0.png",
-    showPromo: true,
-    promoText: "看完課程介紹，立刻折價 3,000 元",
-    buttonText: "立即體驗",
-  },
-  {
-    id: "AI_BDD",
-    code: "AI_BDD",
-    name: "AI x BDD：規格驅動全自動開發術",
-    description: "AI Top 1% 工程師必修課，掌握規格驅動的全自動化開發",
-    status: "水球潘",
-    image: "/images/course_4.png",
-    showPromo: false,
-    promoText: "",
-    buttonText: "立刻購買",
-  },
-]
+// 課程資料型別
+interface Course {
+  id: string
+  code: string
+  title: string
+  description: string
+  teacherName: string
+  priceTwd: number
+  thumbnailUrl?: string
+  isOwned?: boolean
+  hasFreePreview?: boolean
+}
 
 // 假資料：資訊卡片
 interface InfoCardButton {
@@ -126,9 +114,78 @@ const infoCards: InfoCard[] = [
 
 export default function HomePage() {
   const { currentCourse } = useCourse()
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [firstFreeUnits, setFirstFreeUnits] = useState<Record<string, string>>({})
+
+  // 從 API 獲取課程資料
+  useEffect(() => {
+    async function fetchCourses() {
+      try {
+        const res = await fetch('/api/courses')
+        if (res.ok) {
+          const data = await res.json()
+          setCourses(data)
+
+          // 為每個有免費試看的課程獲取第一個免費單元
+          data.forEach(async (course: Course) => {
+            if (course.hasFreePreview) {
+              const detailRes = await fetch(`/api/courses/${course.code}`)
+              if (detailRes.ok) {
+                const detail = await detailRes.json()
+                // 找到第一個免費試看單元
+                for (const section of detail.sections) {
+                  const freeUnit = section.units.find((u: any) => u.isFreePreview)
+                  if (freeUnit) {
+                    setFirstFreeUnits(prev => ({
+                      ...prev,
+                      [course.code]: freeUnit.unitId
+                    }))
+                    break
+                  }
+                }
+              }
+            }
+          })
+        }
+      } catch (error) {
+        console.error('獲取課程資料失敗:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCourses()
+  }, [])
 
   // 判斷是否顯示提示條（只有軟體設計模式精通之旅才顯示）
   const showPromoAlert = currentCourse.id === "DESIGN_PATTERNS"
+
+  // 課程顯示設定（根據課程代碼）
+  const getCourseDisplayConfig = (courseCode: string) => {
+    switch (courseCode) {
+      case 'SOFTWARE_DESIGN_PATTERN':
+        return {
+          image: '/images/course_0.png',
+          showPromo: true,
+          promoText: '看完課程介紹，立刻折價 3,000 元',
+          buttonText: '立即體驗',
+        }
+      case 'AI_X_BDD':
+        return {
+          image: '/images/course_1.png',
+          showPromo: false,
+          promoText: '',
+          buttonText: '立刻購買',
+        }
+      default:
+        return {
+          image: '/images/course_0.png',
+          showPromo: false,
+          promoText: '',
+          buttonText: '立即體驗',
+        }
+    }
+  }
 
   return (
     <div className="flex flex-col bg-gradient-to-b from-muted/30 to-background">
@@ -147,7 +204,7 @@ export default function HomePage() {
                 variant="outline"
                 className="border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white flex-shrink-0"
               >
-                <Link href="/journeys/BACKEND_JAVA" className="inline-flex items-center justify-center w-full h-full">
+                <Link href="/courses/software-design-pattern" className="inline-flex items-center justify-center w-full h-full">
                   前往
                 </Link>
               </Button>
@@ -167,64 +224,81 @@ export default function HomePage() {
 
             {/* 兩個主要課程 */}
             <CardContent>
-              <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-                {featuredCourses.map((course) => {
-                  const isSelected = currentCourse.id === course.id
-                  return (
-                    <Card
-                      key={course.id}
-                      className={`flex flex-col overflow-hidden transition-all duration-300 cursor-pointer hover:scale-105 ${
-                        isSelected
-                          ? 'border-2 border-yellow-600 shadow-lg'
-                          : 'border-2 border-transparent hover:border-yellow-600/50'
-                      }`}
-                    >
-                      {/* 課程封面圖 */}
-                      <div className="relative w-full h-48">
-                        <Image
-                          src={course.image}
-                          alt={course.name}
-                          fill
-                          className="object-cover"
-                          priority
-                        />
-                      </div>
+              {loading ? (
+                <div className="text-center py-12 text-muted-foreground">載入中...</div>
+              ) : courses.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">目前尚無可用課程</div>
+              ) : (
+                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  {courses.map((course) => {
+                    const displayConfig = getCourseDisplayConfig(course.code)
+                    const isSelected = currentCourse.code === course.code
 
-                      <CardHeader>
-                        <CardTitle className="text-xl">{course.name}</CardTitle>
-                        <CardDescription className="text-lg font-semibold text-yellow-600 dark:text-yellow-500">
-                          {course.status}
-                        </CardDescription>
-                      </CardHeader>
+                    return (
+                      <Card
+                        key={course.id}
+                        className={`flex flex-col overflow-hidden transition-all duration-300 cursor-pointer hover:scale-105 bg-card ${
+                          isSelected
+                            ? 'border-2 border-yellow-600 shadow-lg'
+                            : 'border-2 border-muted/50 hover:border-yellow-600/50'
+                        }`}
+                      >
+                        {/* 課程封面圖 */}
+                        <div className="relative w-full h-48">
+                          <Image
+                            src={course.thumbnailUrl ? `/${course.thumbnailUrl}` : displayConfig.image}
+                            alt={course.title}
+                            fill
+                            className="object-cover"
+                            priority
+                          />
+                        </div>
 
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground">{course.description}</p>
-                      </CardContent>
+                        <CardHeader>
+                          <CardTitle className="text-xl">{course.title}</CardTitle>
+                          <CardDescription className="text-lg font-semibold text-yellow-600 dark:text-yellow-500">
+                            {course.teacherName}
+                          </CardDescription>
+                        </CardHeader>
 
-                      <CardFooter className="mt-auto flex flex-col gap-2">
-                        {/* 黃色促銷文字（僅軟體設計模式精通之旅顯示）*/}
-                        {course.showPromo && (
-                          <p className="text-sm font-medium text-yellow-600 dark:text-yellow-500 text-center w-full">
-                            {course.promoText}
-                          </p>
-                        )}
-                        <Button
-                          asChild
-                          className={`w-full border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white ${
-                            isSelected ? 'bg-yellow-600 text-white' : 'bg-transparent'
-                          }`}
-                          size="lg"
-                          variant="outline"
-                        >
-                          <Link href={`/journeys/${course.code}`} className="inline-flex items-center justify-center w-full h-full">
-                            {course.buttonText}
-                          </Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  )
-                })}
-              </div>
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground">{course.description}</p>
+                        </CardContent>
+
+                        <CardFooter className="mt-auto flex flex-col gap-2">
+                          {/* 黃色促銷文字（僅軟體設計模式精通之旅顯示）*/}
+                          {displayConfig.showPromo && (
+                            <p className="text-sm font-medium text-yellow-600 dark:text-yellow-500 text-center w-full">
+                              {displayConfig.promoText}
+                            </p>
+                          )}
+                          <Button
+                            asChild
+                            className={
+                              isSelected
+                                ? 'w-full border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-white bg-transparent'
+                                : 'w-full bg-yellow-600 hover:bg-yellow-700 text-black'
+                            }
+                            size="lg"
+                            variant={isSelected ? 'outline' : 'default'}
+                          >
+                            <Link
+                              href={
+                                course.hasFreePreview && displayConfig.buttonText === '立即體驗' && firstFreeUnits[course.code]
+                                  ? `/journeys/${course.code}/missions/${firstFreeUnits[course.code]}`
+                                  : `/courses/${course.code}`
+                              }
+                              className="inline-flex items-center justify-center w-full h-full"
+                            >
+                              {displayConfig.buttonText}
+                            </Link>
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

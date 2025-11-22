@@ -47,6 +47,8 @@ import {
 } from "@/components/ui/select"
 import { useCourse, AVAILABLE_COURSES } from "@/contexts/course-context"
 import { MobileSidebar } from "@/components/mobile-sidebar"
+import { useSidebar } from "@/contexts/sidebar-context"
+import { cn } from "@/lib/utils"
 
 /**
  * 使用者資料型別
@@ -79,6 +81,7 @@ export function SiteHeader() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { currentCourse, setCurrentCourse } = useCourse()
+  const { isCollapsed, toggleSidebar } = useSidebar()
   const [user, setUser] = React.useState<UserData | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false)
@@ -99,6 +102,9 @@ export function SiteHeader() {
 
   // 檢查是否為認證頁面（登入頁面）
   const isAuthPage = pathname.startsWith('/login')
+
+  // 檢查是否為課程學習頁面
+  const isJourneyPage = pathname.startsWith('/journeys/')
 
   // 檢查是否應該顯示「前往挑戰」按鈕
   // 當選擇 AI_BDD 課程時，隱藏此按鈕
@@ -201,8 +207,21 @@ export function SiteHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="relative flex h-full items-center px-6">
-        {/* 漢堡排選單（僅在非認證頁面且手機版顯示）*/}
-        {!isAuthPage && (
+        {/* 課程學習頁面的漢堡排（在 header 內部，靠左對齊到內容區左側）*/}
+        {isJourneyPage && (
+          <button
+            onClick={toggleSidebar}
+            className={cn(
+              "absolute z-50 flex h-10 w-10 items-center justify-center bg-background hover:bg-muted border rounded transition-all duration-300",
+              isCollapsed ? "left-4" : "left-64"
+            )}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* 漢堡排選單（僅在非認證頁面且非課程學習頁面的手機版顯示）*/}
+        {!isAuthPage && !isJourneyPage && (
           <div className="mr-4 lg:hidden">
             <MobileSidebar>
               <Button variant="ghost" size="icon">
@@ -221,8 +240,8 @@ export function SiteHeader() {
           </Link>
         )}
 
-        {/* 中間區域：課程選擇下拉選單（非登入頁面）*/}
-        {!isAuthPage && (
+        {/* 中間區域：課程選擇下拉選單（非登入頁面且非課程學習頁面）*/}
+        {!isAuthPage && !isJourneyPage && (
           <div className="absolute left-1/2 transform -translate-x-1/2">
             <Select
               value={currentCourse.id}
