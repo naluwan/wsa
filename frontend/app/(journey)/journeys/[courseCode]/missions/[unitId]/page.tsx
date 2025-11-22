@@ -35,7 +35,8 @@ import { CourseUnitSidebar } from "@/components/course-unit-sidebar"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/contexts/sidebar-context"
 
-// 動態導入 ReactPlayer（僅客戶端）
+// 動態導入 ReactPlayer（僅客戶端，避免 SSR 影響 YouTube iframe）
+// 使用主要入口以避免打包階段找不到 lazy 子路徑
 const ReactPlayer = dynamic(() => import("react-player"), {
   ssr: false,
 })
@@ -237,6 +238,14 @@ export default function JourneyPlayerPage() {
     }
   }
 
+  // 將 YouTube URL 正規化成嵌入網址（過濾掉分享連結參數，減少阻擋）
+  const normalizedVideoUrl = useMemo(() => {
+    if (!currentUnit?.videoUrl) return null
+
+    const videoId = getYouTubeVideoId(currentUnit.videoUrl)
+    return videoId ? `https://www.youtube.com/watch?v=${videoId}` : currentUnit.videoUrl
+  }, [currentUnit?.videoUrl])
+
   // 調試：在載入完成後輸出單元資訊
   useEffect(() => {
     if (currentUnit) {
@@ -244,10 +253,11 @@ export default function JourneyPlayerPage() {
       console.log('單元 ID:', currentUnit.unitId)
       console.log('原始影片 URL:', currentUnit.videoUrl)
       console.log('Video ID:', getYouTubeVideoId(currentUnit.videoUrl))
+      console.log('Normalized URL:', normalizedVideoUrl)
       console.log('canAccess:', currentUnit.canAccess)
       console.log('==================')
     }
-  }, [currentUnit])
+  }, [currentUnit, normalizedVideoUrl])
 
   if (loading || !currentUnit) {
     return (
@@ -301,22 +311,23 @@ export default function JourneyPlayerPage() {
                 <div
                   key={`player-${currentUnit.unitId}`}
                   ref={playerContainerRef}
-                  className="relative w-full flex-1 bg-black"
+                  className="relative w-full flex-1 bg-black pointer-events-auto"
                 >
-                  {currentUnit.videoUrl ? (
+                  {normalizedVideoUrl ? (
                     <>
                       {/* 調試信息 */}
                       <div className="absolute top-4 left-4 z-50 bg-blue-600 text-white p-4 rounded text-xs max-w-md">
                         <p className="font-bold">調試信息：</p>
                         <p>原始 URL: {currentUnit.videoUrl}</p>
                         <p>Video ID: {getYouTubeVideoId(currentUnit.videoUrl)}</p>
+                        <p>Normalized: {normalizedVideoUrl}</p>
                         <p>Key: player-{currentUnit.unitId}</p>
                       </div>
 
                       {/* ReactPlayer with stable key */}
                       <ReactPlayer
                         ref={playerRef}
-                        url={currentUnit.videoUrl}
+                        url={normalizedVideoUrl}
                         playing={playing}
                         controls={true}
                         volume={volume}
@@ -329,11 +340,26 @@ export default function JourneyPlayerPage() {
                             playerVars: {
                               modestbranding: 1,
                               rel: 0,
-                            }
-                          }
+                              playsinline: 1,
+                              origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+                              enablejsapi: 1,
+                            },
+                          },
+                        }}
+                        onReady={() => {
+                          // 確保 YouTube iframe 已準備好，避免出現不可點擊的灰屏狀態
+                          setPlaying(false)
                         }}
                         onPlay={() => console.log('onPlay')}
                         onPause={() => console.log('onPause')}
+                        onError={(e) => {
+                          console.error('ReactPlayer onError', e)
+                          toast({
+                            title: '影片載入失敗',
+                            description: '無法載入 YouTube 影片，請稍後再試或檢查網路。',
+                            variant: 'destructive',
+                          })
+                        }}
                       />
                     </>
                   ) : (
