@@ -2,7 +2,8 @@ package com.wsa.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
@@ -12,7 +13,8 @@ import java.util.UUID;
  * 課程資料傳輸物件
  * 用於前後端之間傳遞課程資料
  */
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

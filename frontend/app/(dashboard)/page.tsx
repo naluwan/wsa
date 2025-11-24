@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useCourse } from "@/contexts/course-context"
+import { useCourse, AVAILABLE_COURSES } from "@/contexts/course-context"
 
 // 課程資料型別
 interface Course {
@@ -113,7 +113,7 @@ const infoCards: InfoCard[] = [
 ]
 
 export default function HomePage() {
-  const { currentCourse } = useCourse()
+  const { currentCourse, setCurrentCourse } = useCourse()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [firstFreeUnits, setFirstFreeUnits] = useState<Record<string, string>>({})
@@ -159,6 +159,19 @@ export default function HomePage() {
 
   // 判斷是否顯示提示條（只有軟體設計模式精通之旅才顯示）
   const showPromoAlert = currentCourse.id === "DESIGN_PATTERNS"
+
+  /**
+   * 處理課程 card 點擊事件
+   * 功能: 更新全域課程選擇狀態,同時更新上方篩選器和首頁選擇狀態
+   */
+  const handleCourseCardClick = (courseCode: string) => {
+    // 根據 courseCode 找到對應的 Course 物件
+    const targetCourse = AVAILABLE_COURSES.find(c => c.code === courseCode)
+    if (targetCourse) {
+      setCurrentCourse(targetCourse)
+      console.log('[HomePage] 切換課程:', targetCourse.name)
+    }
+  }
 
   // 課程顯示設定（根據課程代碼）
   const getCourseDisplayConfig = (courseCode: string) => {
@@ -237,6 +250,7 @@ export default function HomePage() {
                     return (
                       <Card
                         key={course.id}
+                        onClick={() => handleCourseCardClick(course.code)}
                         className={`flex flex-col overflow-hidden transition-all duration-300 cursor-pointer hover:scale-105 bg-card ${
                           isSelected
                             ? 'border-2 border-yellow-600 shadow-lg'

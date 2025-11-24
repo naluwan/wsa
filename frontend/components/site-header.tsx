@@ -26,7 +26,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { User, LogOut, Users, Sun, Moon, Bell, Map, ChevronDown, Menu } from "lucide-react"
+import { User, LogOut, Users, Sun, Moon, Bell, Map, ChevronDown, Menu, RotateCcw } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { Button } from "@/components/ui/button"
@@ -121,6 +121,7 @@ export function SiteHeader() {
    * 執行時機：
    * - 元件首次載入時
    * - pathname 變更時（例如從登入頁導回首頁、切換頁面等）
+   * - 收到 'userXpUpdated' 事件時（例如完成單元獲得 XP）
    *
    * 資料來源：/api/auth/me（真實資料，來自後端 /api/user/me）
    *
@@ -155,6 +156,18 @@ export function SiteHeader() {
     }
 
     fetchUser()
+
+    // 監聽自定義事件：當使用者 XP 更新時重新載入使用者資料
+    const handleXpUpdate = () => {
+      console.log("[SiteHeader] 收到 XP 更新事件，重新載入使用者資料")
+      fetchUser()
+    }
+
+    window.addEventListener('userXpUpdated', handleXpUpdate)
+
+    return () => {
+      window.removeEventListener('userXpUpdated', handleXpUpdate)
+    }
   }, [pathname]) // 監聽 pathname 變化，確保登入後或路由變更時都能取得最新資料
 
   /**
@@ -195,6 +208,49 @@ export function SiteHeader() {
   }
 
   /**
+   * 重置使用者資料處理函式
+   *
+   * 功能：
+   * - 重置使用者的課程觀看進度（清除所有 user_unit_progress）
+   * - 重置經驗值（totalXp = 0, weeklyXp = 0, level = 1）
+   * - 重置訂單（清除所有 user_courses）
+   *
+   * 流程：
+   * 1. 顯示確認對話框
+   * 2. 呼叫後端 /api/user/reset
+   * 3. 成功後重新整理頁面
+   */
+  const handleReset = async () => {
+    if (!confirm("確定要重置所有資料嗎？\n\n這將清除：\n- 所有課程觀看進度\n- 經驗值（重置為 0）\n- 所有課程訂單\n\n此操作無法復原！")) {
+      return
+    }
+
+    try {
+      console.log("[SiteHeader] 開始重置使用者資料...")
+
+      const response = await fetch("/api/user/reset", {
+        method: "POST",
+        credentials: "include",
+      })
+
+      console.log("[SiteHeader] 重置 API 回應狀態:", response.status)
+
+      if (response.ok) {
+        console.log("[SiteHeader] 重置成功，重新整理頁面")
+        alert("重置成功！頁面即將重新整理。")
+        // 重新整理頁面以載入最新資料
+        window.location.href = "/"
+      } else {
+        console.error("[SiteHeader] 重置 API 回應失敗")
+        alert("重置失敗，請稍後再試。")
+      }
+    } catch (error) {
+      console.error("[SiteHeader] 重置失敗:", error)
+      alert("重置失敗，請稍後再試。")
+    }
+  }
+
+  /**
    * 課程選擇變更處理函式
    */
   const handleCourseChange = (courseId: string) => {
@@ -207,13 +263,15 @@ export function SiteHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="relative flex h-full items-center px-6">
-        {/* 課程學習頁面的漢堡排（在 header 內部，靠左對齊到內容區左側）*/}
+        {/* 課程學習頁面的漢堡排（桌面版在 sidebar 旁邊，手機版固定在左側）*/}
         {isJourneyPage && (
           <button
             onClick={toggleSidebar}
             className={cn(
               "absolute z-50 flex h-10 w-10 items-center justify-center bg-background hover:bg-muted border rounded transition-all duration-300",
-              isCollapsed ? "left-4" : "left-64"
+              // 手機版固定在左側，桌面版跟隨 sidebar（加間距）
+              "left-4 md:transition-all md:duration-300",
+              !isCollapsed && "md:left-[272px]" // 264px (sidebar) + 8px (間距)
             )}
           >
             <Menu className="h-5 w-5" />
@@ -455,6 +513,14 @@ export function SiteHeader() {
                       邀請好友
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleReset}
+                    onSelect={(e) => e.preventDefault()}
+                    className="cursor-pointer px-4 py-2"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    重置資料
+                  </DropdownMenuItem>
                 </div>
 
                 <DropdownMenuSeparator />
@@ -463,7 +529,7 @@ export function SiteHeader() {
                 <div className="py-1">
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="cursor-pointer text-destructive px-4 py-2"
+                    className="cursor-pointer px-4 py-2"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     登出

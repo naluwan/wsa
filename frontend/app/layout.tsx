@@ -11,6 +11,9 @@ import "./globals.css";
 export const metadata = {
   title: "水球軟體學院：軟體設計模式精通之旅 ",
   description: "提升您的工作技能，開啟職涯新篇章",
+  icons: {
+    icon: '/icon.png',
+  },
 };
 
 export default function RootLayout({

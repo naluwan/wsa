@@ -2,7 +2,9 @@ package com.wsa.repository;
 
 import com.wsa.entity.UserUnitProgress;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,4 +42,18 @@ public interface UserUnitProgressRepository extends JpaRepository<UserUnitProgre
      * @return true 表示已完成，false 表示未完成
      */
     boolean existsByUserIdAndUnitId(UUID userId, UUID unitId);
+
+    /**
+     * 刪除使用者的所有單元進度記錄
+     * 用途：重置使用者資料時使用
+     *
+     * 注意：
+     * - @Modifying: 標示此方法會修改資料庫
+     * - @Transactional: 確保在交易中執行
+     *
+     * @param userId 使用者 UUID
+     */
+    @Modifying
+    @Transactional
+    void deleteByUserId(UUID userId);
 }

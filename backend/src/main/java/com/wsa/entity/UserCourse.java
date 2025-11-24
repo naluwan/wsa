@@ -3,8 +3,9 @@ package com.wsa.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -20,7 +21,8 @@ import java.util.UUID;
     name = "user_courses",
     uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "course_id"})
 )
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

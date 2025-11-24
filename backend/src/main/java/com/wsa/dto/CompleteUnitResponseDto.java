@@ -2,14 +2,16 @@ package com.wsa.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 /**
  * 完成單元回應資料傳輸物件
  * 包含更新後的使用者資訊和單元完成狀態
  */
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,7 +26,8 @@ public class CompleteUnitResponseDto {
     /**
      * 使用者資訊子類別
      */
-    @Data
+    @Getter
+@Setter
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
@@ -45,7 +48,8 @@ public class CompleteUnitResponseDto {
     /**
      * 單元資訊子類別
      */
-    @Data
+    @Getter
+@Setter
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
@@ -55,5 +59,8 @@ public class CompleteUnitResponseDto {
 
         /** 是否已完成 */
         private Boolean isCompleted;
+
+        /** 獲得的經驗值 */
+        private Integer xpEarned;
     }
 }

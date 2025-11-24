@@ -55,8 +55,25 @@ public class UnitService {
         // - 其他情況 → false
         boolean canAccess = calculateCanAccess(userId, isOwned, unit.getIsFreePreview());
 
-        // 檢查是否已完成
-        boolean isCompleted = userId != null && progressRepository.existsByUserIdAndUnitId(userId, unit.getId());
+        // 查詢使用者進度（包含是否完成與最後觀看位置）
+        boolean isCompleted = false;
+        int lastPositionSeconds = 0;
+
+        if (userId != null) {
+            UserUnitProgress progress = progressRepository
+                .findByUserIdAndUnitId(userId, unit.getId())
+                .orElse(null);
+
+            if (progress != null) {
+                // 判斷是否已完成（completedAt 不為 null）
+                isCompleted = progress.getCompletedAt() != null;
+
+                // 取得最後觀看位置（若為 null 則預設為 0）
+                lastPositionSeconds = progress.getLastPositionSeconds() != null
+                    ? progress.getLastPositionSeconds()
+                    : 0;
+            }
+        }
 
         // 建立 UnitDto
         UnitDto.UnitDtoBuilder builder = UnitDto.builder()
@@ -72,7 +89,8 @@ public class UnitService {
             .xpReward(unit.getXpReward())
             .isFreePreview(unit.getIsFreePreview())
             .canAccess(canAccess)
-            .isCompleted(isCompleted);
+            .isCompleted(isCompleted)
+            .lastPositionSeconds(lastPositionSeconds);
 
         // 當 canAccess = false 時，不回傳 videoUrl（保護影片資源）
         if (canAccess) {
@@ -86,6 +104,11 @@ public class UnitService {
      * 完成單元並獲得經驗值
      * 如果已經完成過，不會重複給予經驗值
      *
+     * 重要：
+     *   - 此方法會將 completedAt 設為目前時間
+     *   - 若該單元已有進度記錄（觀看中），則更新現有記錄
+     *   - 若該單元無進度記錄，則建立新記錄
+     *
      * @param unitId 單元 ID
      * @param userId 使用者 UUID
      * @return 完成單元後的回應資料
@@ -95,37 +118,51 @@ public class UnitService {
         Unit unit = unitRepository.findByUnitId(unitId)
             .orElseThrow(() -> new RuntimeException("找不到單元：" + unitId));
 
-        // 檢查是否已經完成過
-        boolean alreadyCompleted = progressRepository.existsByUserIdAndUnitId(userId, unit.getId());
+        // 查詢是否已有進度記錄
+        UserUnitProgress progress = progressRepository
+            .findByUserIdAndUnitId(userId, unit.getId())
+            .orElse(null);
 
-        if (!alreadyCompleted) {
-            // 建立完成紀錄
-            UserUnitProgress progress = UserUnitProgress.builder()
-                .userId(userId)
-                .unitId(unit.getId())
-                .build();
-            progressRepository.save(progress);
-
-            // 增加經驗值並更新等級
-            User updatedUser = xpService.addXp(userId, unit.getXpReward());
-
-            // 建立回應
-            return CompleteUnitResponseDto.builder()
-                .user(CompleteUnitResponseDto.UserInfo.builder()
-                    .id(updatedUser.getId().toString())
-                    .level(updatedUser.getLevel())
-                    .totalXp(updatedUser.getTotalXp())
-                    .weeklyXp(updatedUser.getWeeklyXp())
-                    .build())
-                .unit(CompleteUnitResponseDto.UnitInfo.builder()
-                    .unitId(unit.getUnitId())
-                    .isCompleted(true)
-                    .build())
-                .build();
-        } else {
-            // 已經完成過，不重複給經驗值，但回傳目前狀態
+        // 檢查是否已經完成過（completedAt 不為 null）
+        if (progress != null && progress.getCompletedAt() != null) {
+            // 已經完成過，不重複給經驗值
             throw new RuntimeException("單元已經完成過了");
         }
+
+        if (progress == null) {
+            // 若不存在進度記錄，建立新記錄
+            progress = UserUnitProgress.builder()
+                .userId(userId)
+                .unitId(unit.getId())
+                .lastPositionSeconds(0)
+                .lastWatchedAt(null)
+                .build();
+        }
+
+        // 設定完成時間（重要：手動設定，因為已移除 @CreationTimestamp）
+        progress.setCompletedAt(java.time.LocalDateTime.now());
+
+        // 保存進度記錄
+        progressRepository.save(progress);
+
+        // 增加經驗值並更新等級
+        Integer xpEarned = unit.getXpReward();
+        User updatedUser = xpService.addXp(userId, xpEarned);
+
+        // 建立回應
+        return CompleteUnitResponseDto.builder()
+            .user(CompleteUnitResponseDto.UserInfo.builder()
+                .id(updatedUser.getId().toString())
+                .level(updatedUser.getLevel())
+                .totalXp(updatedUser.getTotalXp())
+                .weeklyXp(updatedUser.getWeeklyXp())
+                .build())
+            .unit(CompleteUnitResponseDto.UnitInfo.builder()
+                .unitId(unit.getUnitId())
+                .isCompleted(true)
+                .xpEarned(xpEarned)
+                .build())
+            .build();
     }
 
     /**

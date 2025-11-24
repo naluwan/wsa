@@ -12,10 +12,9 @@
  */
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Lock, X, Play, Pause, Volume2, VolumeX, Maximize, SkipForward } from "lucide-react"
-import dynamic from "next/dynamic"
+import { Lock, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -32,14 +31,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { CourseUnitSidebar } from "@/components/course-unit-sidebar"
+import { YoutubePlayer } from "@/components/youtube-player"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/contexts/sidebar-context"
-
-// 動態導入 ReactPlayer（僅客戶端，避免 SSR 影響 YouTube iframe）
-// 改用官方建議的 lazy 版本，確保載入完成後才初始化播放器
-const ReactPlayer = dynamic(() => import("react-player/lazy"), {
-  ssr: false,
-})
 
 /**
  * 單元詳情型別
@@ -56,18 +50,23 @@ interface UnitDetail {
   isFreePreview: boolean
   canAccess: boolean
   isCompleted: boolean
+  lastPositionSeconds?: number
 }
 
 /**
  * 完成單元回應型別
  */
 interface CompleteUnitResponse {
-  unitId: string
-  xpEarned: number
   user: {
+    id: string
     level: number
     totalXp: number
     weeklyXp: number
+  }
+  unit: {
+    unitId: string
+    isCompleted: boolean
+    xpEarned: number
   }
 }
 
@@ -83,7 +82,6 @@ export default function JourneyPlayerPage() {
 
   // 資料狀態
   const [currentUnit, setCurrentUnit] = useState<UnitDetail | null>(null)
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
 
   // UI 狀態
@@ -91,25 +89,16 @@ export default function JourneyPlayerPage() {
   const [completing, setCompleting] = useState<boolean>(false)
   const [showCouponAlert, setShowCouponAlert] = useState<boolean>(true)
 
-  // 播放器狀態
-  const playerRef = useRef<any>(null)
-  const playerContainerRef = useRef<HTMLDivElement>(null)
-  const [playing, setPlaying] = useState<boolean>(false)
-  const [volume, setVolume] = useState<number>(0.8)
-  const [muted, setMuted] = useState<boolean>(false)
+  // 進度追蹤狀態（使用 ref 儲存即時進度，避免頻繁重新渲染）
+  const currentSecondsRef = useRef<number>(0)
+  const durationSecondsRef = useRef<number>(0)
 
-  // 檢查登入狀態
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await fetch('/api/auth/me')
-        setIsLoggedIn(res.ok)
-      } catch {
-        setIsLoggedIn(false)
-      }
-    }
-    checkAuth()
-  }, [])
+  // 只在需要顯示時才更新的進度百分比（減少重新渲染）
+  const [progressPercent, setProgressPercent] = useState<number>(0)
+  const [lastSavedPosition, setLastSavedPosition] = useState<number>(0)
+  const lastSaveTimeRef = useRef<number>(0)
+  const lastPercentUpdateRef = useRef<number>(0)
+
 
   // 載入當前單元詳情
   useEffect(() => {
@@ -122,6 +111,11 @@ export default function JourneyPlayerPage() {
         if (res.ok) {
           const data: UnitDetail = await res.json()
           setCurrentUnit(data)
+
+          // 設定上次觀看位置
+          if (data.lastPositionSeconds) {
+            setLastSavedPosition(data.lastPositionSeconds)
+          }
         }
       } catch (error) {
         console.error('載入單元詳情失敗:', error)
@@ -147,14 +141,20 @@ export default function JourneyPlayerPage() {
       if (res.ok) {
         const data: CompleteUnitResponse = await res.json()
 
-        // 顯示成功訊息
+        // 顯示 toast 通知
         toast({
           title: "單元已完成！",
-          description: `獲得 ${data.xpEarned} XP`,
+          description: `獲得 ${data.unit.xpEarned} XP`,
         })
 
         // 更新當前單元狀態
-        setCurrentUnit(prev => prev ? { ...prev, isCompleted: true } : null)
+        setCurrentUnit(prev => prev ? {
+          ...prev,
+          isCompleted: true,
+        } : null)
+
+        // 觸發自定義事件，通知 SiteHeader 和 Sidebar 更新資料
+        window.dispatchEvent(new Event('userXpUpdated'))
       } else if (res.status === 401) {
         toast({
           title: "請先登入",
@@ -180,38 +180,55 @@ export default function JourneyPlayerPage() {
     }
   }
 
+
   /**
-   * 播放器控制函數
+   * 處理播放進度（使用 ref 避免頻繁重新渲染）
    */
-  const handlePlayPause = () => {
-    setPlaying(!playing)
-  }
+  const handleProgress = (seconds: number, duration: number) => {
+    // 使用 ref 儲存即時進度（不觸發重新渲染）
+    currentSecondsRef.current = seconds
+    durationSecondsRef.current = duration
 
-  const handleVolumeToggle = () => {
-    setMuted(!muted)
-  }
+    const now = Date.now()
 
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume)
-    setMuted(newVolume === 0)
-  }
+    // 每 2 秒更新一次進度百分比（用於顯示）
+    if (now - lastPercentUpdateRef.current >= 2000) {
+      const percent = duration > 0 ? (seconds / duration) * 100 : 0
+      setProgressPercent(percent)
+      lastPercentUpdateRef.current = now
+    }
 
-  const handleFullscreen = () => {
-    if (playerContainerRef.current) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen()
-      } else {
-        playerContainerRef.current.requestFullscreen()
-      }
+    // 每 5 秒保存一次進度
+    if (now - lastSaveTimeRef.current >= 5000) {
+      saveProgress(seconds)
+      lastSaveTimeRef.current = now
     }
   }
 
-  const handleNextUnit = () => {
-    // TODO: 實現下一部影片功能（需要從課程詳情中獲取下一個單元）
-    toast({
-      title: "功能開發中",
-      description: "下一部影片功能即將推出",
-    })
+  /**
+   * 保存觀看進度到後端
+   */
+  const saveProgress = async (position: number) => {
+    if (!currentUnit) return
+
+    try {
+      await fetch(`/api/user/progress/${currentUnit.unitId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lastPositionSeconds: Math.floor(position) }),
+      })
+      // 不更新 lastSavedPosition state，避免觸發播放器重新初始化
+    } catch (error) {
+      console.error('保存進度失敗:', error)
+    }
+  }
+
+  /**
+   * 處理影片結束
+   */
+  const handleVideoEnded = () => {
+    // 影片結束時，可以自動標記為完成（可選）
+    console.log('影片播放結束')
   }
 
   /**
@@ -270,7 +287,11 @@ export default function JourneyPlayerPage() {
       <div
         className={cn(
           "flex-1 transition-all duration-300",
-          isCollapsed ? "ml-0" : "ml-64"
+          // 手機版：沒有左側 margin
+          // 桌面版：根據 sidebar 狀態調整
+          "ml-0",
+          "md:ml-0",
+          !isCollapsed && "md:ml-64"
         )}
       >
         {/* SiteHeader 已經在 Root Layout 中，高度為 16（64px）*/}
@@ -298,50 +319,15 @@ export default function JourneyPlayerPage() {
                   </div>
                 )}
 
-                {/* YouTube 播放器（使用 ReactPlayer，添加穩定的 key） */}
-                <div
-                  key={`player-${currentUnit.unitId}`}
-                  ref={playerContainerRef}
-                  className="relative w-full flex-1 bg-black pointer-events-auto"
-                >
-                  {currentUnit.videoUrl ? (
-                    <>
-                      {/* 調試信息 */}
-                      <div className="absolute top-4 left-4 z-50 bg-blue-600 text-white p-4 rounded text-xs max-w-md">
-                        <p className="font-bold">調試信息：</p>
-                        <p>原始 URL: {currentUnit.videoUrl}</p>
-                        <p>Video ID: {getYouTubeVideoId(currentUnit.videoUrl)}</p>
-                        <p>Key: player-{currentUnit.unitId}</p>
-                      </div>
-
-                      {/* ReactPlayer with stable key */}
-                      <ReactPlayer
-                        ref={playerRef}
-                        url={currentUnit.videoUrl}
-                        playing={playing}
-                        controls={true}
-                        volume={volume}
-                        muted={muted}
-                        width="100%"
-                        height="100%"
-                        style={{ position: 'absolute', top: 0, left: 0 }}
-                        config={{
-                          youtube: {
-                            playerVars: {
-                              modestbranding: 1,
-                              rel: 0,
-                              origin: typeof window !== 'undefined' ? window.location.origin : undefined,
-                            },
-                          },
-                        }}
-                        onReady={() => {
-                          // 確保 YouTube iframe 已準備好，避免出現不可點擊的灰屏狀態
-                          setPlaying(false)
-                        }}
-                        onPlay={() => console.log('onPlay')}
-                        onPause={() => console.log('onPause')}
-                      />
-                    </>
+                {/* YouTube 播放器（使用 YoutubePlayer 組件） */}
+                <div className="relative w-full flex-1 bg-black">
+                  {currentUnit.videoUrl && getYouTubeVideoId(currentUnit.videoUrl) ? (
+                    <YoutubePlayer
+                      videoId={getYouTubeVideoId(currentUnit.videoUrl)!}
+                      onProgress={handleProgress}
+                      onEnded={handleVideoEnded}
+                      initialPosition={lastSavedPosition}
+                    />
                   ) : (
                     <div className="text-white text-center flex items-center justify-center h-full">
                       <div>
@@ -352,26 +338,29 @@ export default function JourneyPlayerPage() {
                   )}
                 </div>
 
-                {/* 交付按鈕（固定在右下角） */}
-                <div className="absolute bottom-8 right-8 z-20">
+                {/* 交付按鈕（固定在右下角，往上移一些） */}
+                <div className="absolute bottom-20 right-8 z-20">
                   <Button
                     onClick={handleCompleteUnit}
-                    disabled={completing || currentUnit.isCompleted}
+                    disabled={
+                      completing ||
+                      currentUnit.isCompleted ||
+                      progressPercent < 95
+                    }
                     size="lg"
                     className="bg-yellow-600 hover:bg-yellow-700 text-black shadow-lg"
                     data-testid="complete-unit-button"
                   >
-                    {currentUnit.isCompleted ? '已完成' : completing ? '處理中...' : '標記為完成'}
+                    {currentUnit.isCompleted
+                      ? '已完成'
+                      : completing
+                      ? '處理中...'
+                      : progressPercent < 95
+                      ? `觀看進度 ${Math.floor(progressPercent)}%`
+                      : '交付課程'
+                    }
                   </Button>
                 </div>
-
-                {currentUnit.isCompleted && (
-                  <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
-                    <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
-                      ✅ 您已完成此單元並獲得 {currentUnit.xpReward} XP
-                    </div>
-                  </div>
-                )}
               </>
             ) : (
               // 無權限：顯示鎖定提示

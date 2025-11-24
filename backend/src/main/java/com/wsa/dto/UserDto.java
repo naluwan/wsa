@@ -3,8 +3,9 @@ package com.wsa.dto;
 import com.wsa.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.UUID;
 
@@ -12,7 +13,8 @@ import java.util.UUID;
  * 使用者資料傳輸物件
  * 用於 API 回應，只包含前端需要的使用者資訊
  */
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -135,19 +135,107 @@ const aiBddNavGroups = [
   },
 ];
 
+// 未登入時的導覽項目（軟體設計模式精通之旅）
+const unauthenticatedDesignPatternsNavGroups = [
+  {
+    items: [
+      {
+        title: "首頁",
+        href: "/",
+        icon: Home,
+      },
+      {
+        title: "課程",
+        href: "/courses",
+        icon: BookOpen,
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        title: "排行榜",
+        href: "/leaderboard",
+        icon: Trophy,
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        title: "所有單元",
+        href: "/units",
+        icon: Grid3x3,
+      },
+      {
+        title: "挑戰地圖",
+        href: "/map",
+        icon: Map,
+      },
+      {
+        title: "SOP 寶典",
+        href: "/sop",
+        icon: FileText,
+      },
+    ],
+  },
+];
+
+// 未登入時的導覽項目（AI x BDD 課程）
+const unauthenticatedAiBddNavGroups = [
+  {
+    items: [
+      {
+        title: "首頁",
+        href: "/",
+        icon: Home,
+      },
+      {
+        title: "課程",
+        href: "/courses",
+        icon: BookOpen,
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        title: "排行榜",
+        href: "/leaderboard",
+        icon: Trophy,
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        title: "所有單元",
+        href: "/units",
+        icon: Grid3x3,
+      },
+      {
+        title: "Prompt 寶典",
+        href: "/sop",
+        icon: Sparkles,
+      },
+    ],
+  },
+];
+
 interface AppSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
+  isAuthenticated?: boolean;
 }
 
-export function AppSidebar({ isCollapsed, onToggle }: AppSidebarProps) {
+export function AppSidebar({ isCollapsed, onToggle, isAuthenticated = true }: AppSidebarProps) {
   const pathname = usePathname();
   const { currentCourse } = useCourse();
 
-  // 根據當前課程選擇導航項目
-  const navGroups = currentCourse.id === "AI_BDD"
-    ? aiBddNavGroups
-    : designPatternsNavGroups;
+  // 根據當前課程和登入狀態選擇導航項目
+  const navGroups = isAuthenticated
+    ? (currentCourse.id === "AI_BDD" ? aiBddNavGroups : designPatternsNavGroups)
+    : (currentCourse.id === "AI_BDD" ? unauthenticatedAiBddNavGroups : unauthenticatedDesignPatternsNavGroups);
 
   return (
     <aside

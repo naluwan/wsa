@@ -2,7 +2,8 @@ package com.wsa.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
@@ -11,7 +12,8 @@ import java.util.UUID;
  * 單元詳細資料傳輸物件
  * 用於單元頁面顯示完整的單元資訊
  */
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -58,4 +60,11 @@ public class UnitDto {
 
     /** 是否已完成 */
     private Boolean isCompleted;
+
+    /**
+     * 使用者上次觀看到的秒數位置
+     * 用途：讓前端播放器可以從此位置繼續播放
+     * 預設值：0（表示尚未觀看）
+     */
+    private Integer lastPositionSeconds;
 }

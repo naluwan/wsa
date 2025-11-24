@@ -2,7 +2,8 @@ package com.wsa.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
@@ -11,7 +12,8 @@ import java.util.List;
  * 課程詳情回應資料傳輸物件
  * 用於課程詳情頁面，包含課程資訊與章節化的單元清單
  */
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

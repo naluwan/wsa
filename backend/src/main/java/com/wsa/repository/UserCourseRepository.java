@@ -2,7 +2,9 @@ package com.wsa.repository;
 
 import com.wsa.entity.UserCourse;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -48,4 +50,18 @@ public interface UserCourseRepository extends JpaRepository<UserCourse, UUID> {
      * @return true 表示使用者擁有該課程，false 表示未擁有
      */
     boolean existsByUserIdAndCourseId(UUID userId, UUID courseId);
+
+    /**
+     * 刪除使用者的所有課程訂單
+     * 用途：重置使用者資料時使用
+     *
+     * 注意：
+     * - @Modifying: 標示此方法會修改資料庫
+     * - @Transactional: 確保在交易中執行
+     *
+     * @param userId 使用者 UUID
+     */
+    @Modifying
+    @Transactional
+    void deleteByUserId(UUID userId);
 }

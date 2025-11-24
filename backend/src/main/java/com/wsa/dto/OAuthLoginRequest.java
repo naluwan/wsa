@@ -2,14 +2,16 @@ package com.wsa.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 /**
  * OAuth 登入請求 DTO
  * 從前端接收 OAuth 提供者回傳的使用者基本資料
  */
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

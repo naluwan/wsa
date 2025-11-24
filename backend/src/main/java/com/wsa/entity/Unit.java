@@ -3,8 +3,9 @@ package com.wsa.entity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -17,7 +18,8 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "units")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -56,7 +58,7 @@ public class Unit {
     /** 完成此單元後獲得的經驗值 */
     @Column(name = "xp_reward", nullable = false)
     @Builder.Default
-    private Integer xpReward = 100;
+    private Integer xpReward = 200;
 
     /** 章節標題（用於 Accordion 分組顯示） */
     @Column(name = "section_title", nullable = false)

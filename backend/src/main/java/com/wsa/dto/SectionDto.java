@@ -2,7 +2,8 @@ package com.wsa.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
@@ -11,7 +12,8 @@ import java.util.List;
  * 章節資料傳輸物件
  * 用於課程詳情中以 Accordion 方式顯示章節與單元清單
  */
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

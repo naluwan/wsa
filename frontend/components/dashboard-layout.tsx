@@ -10,7 +10,12 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SiteFooter } from "@/components/site-footer"
 import { cn } from "@/lib/utils"
 
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  isAuthenticated?: boolean;
+}
+
+export function DashboardLayout({ children, isAuthenticated = true }: DashboardLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   return (
@@ -19,6 +24,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isAuthenticated={isAuthenticated}
       />
 
       {/* 主內容區（包含header和content） */}

@@ -57,6 +57,8 @@ public class SecurityConfig {
                         .requestMatchers("GET", "/api/courses", "/api/courses/*").permitAll()
                         // 單元詳情（GET）允許所有人存取（包含未登入使用者）
                         .requestMatchers("GET", "/api/units/*").permitAll()
+                        // 排行榜（GET）允許所有人存取（包含未登入使用者）
+                        .requestMatchers("GET", "/api/leaderboard/**").permitAll()
                         // /api/** 其他路徑需要認證
                         .requestMatchers("/api/**").authenticated()
                         // 其他所有請求允許存取
